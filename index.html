@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>角色卡编辑器 · Character Card Editor</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --bg:#f5f3ef; --panel:#fdfcfa; --line:#e6e0d6; --line2:#efeae1;
+    --text:#3a3a3a; --muted:#9b8f7e; --accent:#8b9dc3; --accent2:#c4b5a0;
+    --danger:#c48c8c; --ok:#8fae8f; --chip:#ece7dd;
+  }
+  body{font-family:'PingFang SC','Microsoft YaHei',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}
+  /* 顶栏 */
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(253,252,250,.95);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:10px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .topbar h1{font-size:16px;font-weight:600;letter-spacing:1px;margin-right:auto;color:#5a5a5a;}
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:7px 14px;border-radius:8px;
+    font-size:13px;cursor:pointer;transition:.15s;white-space:nowrap;}
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .btn.primary:hover{opacity:.88;color:#fff;}
+  .btn.danger{color:var(--danger);border-color:#e6d0d0;}
+  .btn.danger:hover{background:var(--danger);color:#fff;}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .status{font-size:12px;color:var(--muted);margin-left:4px;}
+  /* 标签页 */
+  .tabs{display:flex;gap:4px;padding:8px 18px 0;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap;position:sticky;top:53px;z-index:40;}
+  .tab{padding:8px 16px;font-size:13px;cursor:pointer;border-radius:8px 8px 0 0;color:var(--muted);border:1px solid transparent;border-bottom:none;}
+  .tab.active{background:var(--bg);color:var(--text);border-color:var(--line);font-weight:600;}
+  .tab .cnt{font-size:11px;opacity:.6;margin-left:4px;}
+  /* 主体 */
+  .wrap{max-width:1100px;margin:0 auto;padding:20px 18px 80px;}
+  .empty{text-align:center;color:var(--muted);padding:80px 20px;font-size:14px;}
+  .empty .big{font-size:40px;margin-bottom:16px;opacity:.5;}
+  .pane{display:none;}
+  .pane.active{display:block;}
+  /* 表单 */
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;letter-spacing:.5px;}
+  .field label .hint{color:#c0b8a8;font-weight:normal;}
+  input[type=text],textarea,select{width:100%;border:1px solid var(--line);background:var(--panel);color:var(--text);
+    border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;line-height:1.6;}
+  textarea{resize:vertical;min-height:70px;}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);}
+  .row{display:flex;gap:14px;flex-wrap:wrap;}
+  .row>.field{flex:1;min-width:160px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .mono{font-family:'Courier New',ui-monospace,monospace;}
+  /* 卡片列表 */
+  .card-item{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px;}
+  .card-item.disabled{opacity:.55;}
+  .card-head{display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .card-head .title{font-weight:600;font-size:14px;flex:1;}
+  .card-head .meta{font-size:11px;color:var(--muted);}
+  .badge{font-size:10px;padding:2px 7px;border-radius:10px;background:var(--chip);color:#8b8275;white-space:nowrap;}
+  .badge.on{background:#e3ece3;color:#5f7a5f;}
+  .badge.blue{background:#e6ebf4;color:#6a7fa8;}
+  .card-body{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line2);display:none;}
+  .card-item.open .card-body{display:block;}
+  .arrow{transition:.2s;color:var(--muted);font-size:12px;}
+  .card-item.open .arrow{transform:rotate(90deg);}
+  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+  .toolbar input[type=text]{flex:1;min-width:180px;}
+  .chk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none;}
+  .chk input{width:auto;}
+  .keys-preview{font-size:11px;color:var(--muted);margin-top:2px;}
+  .greet-layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:520px;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(100,88,70,.035);}
+  .greet-nav{background:linear-gradient(145deg,#faf8f3 0%,#f4f0e8 100%);border-right:1px solid var(--line2);padding:12px 10px;overflow:auto;}
+  .greet-nav-title{font-size:11px;letter-spacing:1px;color:var(--muted);padding:5px 9px 10px;}
+  .greet-nav-item{display:flex;align-items:center;gap:8px;width:100%;border:1px solid transparent;background:transparent;color:#70695e;border-radius:9px;padding:10px 9px;text-align:left;cursor:pointer;font:inherit;transition:.15s;}
+  .greet-nav-item:hover{background:rgba(255,255,255,.65);color:var(--text);}
+  .greet-nav-item.active{background:#fffefa;border-color:var(--line);color:#5a5a5a;box-shadow:0 2px 6px rgba(100,88,70,.06);}
+  .greet-nav-item .nav-copy{min-width:0;flex:1;}
+  .greet-nav-item .nav-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .greet-nav-item .nav-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+  .greet-nav-item .nav-dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);flex:0 0 auto;}
+  .greet-nav-item.active .nav-dot{background:var(--accent);}
+  .greet-editor{min-width:0;display:flex;flex-direction:column;background:#fffefa;}
+  .greet-editor-head{display:flex;align-items:center;gap:10px;padding:16px 24px;border-bottom:1px solid var(--line2);}
+  .greet-editor-title{font-size:15px;font-weight:600;color:#5a5a5a;flex:1;}
+  .greet-editor-head .meta{font-size:11px;color:var(--muted);}
+  .greet-editor-body{display:flex;flex:1;min-height:0;padding:20px 24px;}
+  .greet-editor-body textarea{width:100%;min-height:420px;flex:1;border:1px solid var(--line);border-radius:9px;background:#fff;padding:16px 18px;font-size:14px;line-height:1.85;resize:vertical;}
+  .greet-editor-body textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(139,157,195,.18);outline:none;}
+  .greet-editor-foot{display:flex;align-items:center;gap:8px;padding:0 24px 18px;}
+  .count{font-size:11px;color:var(--muted);text-align:right;margin-top:3px;}
+  .raw-area{width:100%;min-height:400px;font-family:'Courier New',monospace;font-size:12px;line-height:1.5;}
+  .note{font-size:12px;color:var(--muted);background:#faf8f3;border:1px solid var(--line2);border-radius:8px;padding:10px 12px;margin-bottom:16px;}
+  .note b{color:#8b8275;}
+  .split{height:1px;background:var(--line2);margin:20px 0;}
+  .adv{margin-top:12px;}
+  .adv summary{font-size:12px;color:var(--muted);cursor:pointer;padding:4px 0;}
+  .adv textarea{margin-top:8px;font-family:'Courier New',monospace;font-size:12px;}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#3a3a3a;color:#fff;
+    padding:10px 20px;border-radius:8px;font-size:13px;z-index:100;opacity:0;transition:.25s;pointer-events:none;}
+  .toast.show{opacity:1;}
+  .toast.err{background:var(--danger);}
+  .toast.ok{background:var(--ok);}
+  .filepill{font-size:12px;color:var(--muted);background:var(--chip);padding:4px 10px;border-radius:6px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .import-review{display:flex;align-items:center;gap:14px;background:#faf8f3;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:16px;}
+  .import-review[hidden]{display:none;}
+  .import-review-copy{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+  .import-review-copy strong{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .import-review-copy span{font-size:12px;color:var(--muted);}
+  .import-review-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+  .add-row{text-align:center;margin-top:8px;}
+  @media (min-width:1137px){
+    /* 开场白使用整行画布，让左侧标题栏与右侧编辑区形成连续分栏 */
+    #pane-greet{width:calc(100vw - 36px);margin-left:calc((1100px - 100vw)/2);}
+  }
+  @media (max-width:680px){
+    .import-review{align-items:stretch;flex-direction:column;}
+    .import-review-actions{justify-content:flex-start;}
+    .greet-layout{grid-template-columns:1fr;min-height:0;}
+    .greet-nav{border-right:0;border-bottom:1px solid var(--line2);max-height:210px;}
+    .greet-editor-body textarea{min-height:280px;padding:15px;}
+    .greet-editor-head,.greet-editor-body{padding-left:15px;padding-right:15px;}
+    .greet-editor-foot{padding-left:15px;padding-right:15px;}
+    #pane-greet{width:auto;margin-left:0;}
+  }
+  /* 弹窗 */
+  .overlay{position:fixed;inset:0;background:rgba(40,36,30,.38);backdrop-filter:blur(2px);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:720px;width:100%;box-shadow:0 12px 40px rgba(80,70,55,.25);margin:auto;}
+  .modal-head{display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);border-radius:14px 14px 0 0;z-index:2;}
+  .modal-head h2{font-size:15px;font-weight:600;flex:1;color:#5a5a5a;}
+  .modal-body{padding:18px 20px;}
+  .modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:13px 20px;border-top:1px solid var(--line);flex-wrap:wrap;position:sticky;bottom:0;background:var(--panel);border-radius:0 0 14px 14px;}
+  .x{cursor:pointer;color:var(--muted);font-size:22px;line-height:1;border:none;background:none;padding:0 4px;}
+  .x:hover{color:var(--danger);}
+  .sec{margin-bottom:22px;}
+  .sec>h3{font-size:13px;color:#7a7062;margin-bottom:10px;letter-spacing:.5px;display:flex;align-items:center;gap:8px;}
+  .sec>h3 .line{flex:1;height:1px;background:var(--line2);}
+  .lib-item{border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:9px;background:#fdfcfa;}
+  .lib-item .lh{display:flex;gap:8px;align-items:center;}
+  .lib-item .lh input{flex:1;}
+  .lib-item textarea{margin-top:8px;min-height:70px;font-size:12px;display:none;}
+  .lib-item.open textarea{display:block;}
+  .polish-btn{border:1px solid #d8cbe0;background:#f3eef7;color:#8a6fae;padding:3px 11px;border-radius:7px;font-size:12px;cursor:pointer;transition:.15s;white-space:nowrap;font-family:inherit;}
+  .polish-btn:hover{background:#8a6fae;color:#fff;border-color:#8a6fae;}
+  .polish-btn:disabled{opacity:.45;cursor:not-allowed;}
+  .field-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
+  .spinner{width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:4px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .mini{font-size:11px;color:var(--muted);}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#d8d0c4;border-radius:5px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>角色卡编辑器</h1>
+<span class="filepill" id="filepill" style="display:none"></span>
+<button class="btn" id="btnOpen">打开角色卡</button>
+<button class="btn" id="btnImportBook" title="导入独立世界书 JSON">导入世界书</button>
+<button class="btn" id="btnOpenRegex">打开正则</button>
+<button class="btn" id="btnTemplate" title="从当前角色卡提取空白模板">提取模板</button>
+<button class="btn" id="btnAISettings">⚙ AI 设置</button>
+<button class="btn" id="btnBackup">下载备份</button>
+<button class="btn primary" id="btnSave">保存</button>
+<span class="status" id="dirty"></span>
+</div>
+<div class="tabs" id="tabs" style="display:none">
+<div class="tab" data-pane="info">角色信息</div>
+<div class="tab" data-pane="greet">开场白<span class="cnt" id="cntGreet"></span></div>
+<div class="tab" data-pane="book">世界书<span class="cnt" id="cntBook"></span></div>
+<div class="tab" data-pane="regex">正则<span class="cnt" id="cntRegex"></span></div>
+<div class="tab" data-pane="raw">原始 JSON</div>
+</div>
+<div class="wrap">
+<div class="empty" id="empty" style="display:block">
+<div class="big">📇</div>
+<div>点击右上角「打开角色卡」，选一个 .json 文件开始编辑。</div>
+<div style="margin-top:10px;font-size:12px;">支持角色卡（chara_card_v3）和正则脚本（.json）。所有改动只在你点「保存」时才写回文件。</div>
+</div>
+<!-- 角色信息 -->
+<div class="pane" id="pane-info">
+<div class="field"><label>角色名 name</label><input id="f-name" type="text"/></div>
+<div class="row">
+<div class="field"><label>作者 creator</label><input id="f-creator" type="text"/></div>
+<div class="field"><label>版本 character_version</label><input id="f-cver" type="text"/></div>
+<div class="field"><label>健谈度 talkativeness <span class="hint">(0~1)</span></label><input class="mono" id="f-talk" type="text"/></div>
+</div>
+<div class="field"><label>标签 tags <span class="hint">(逗号分隔)</span></label><input id="f-tags" type="text"/></div>
+<div class="field"><label>角色描述 description</label><textarea id="f-desc" style="min-height:180px"></textarea><div class="count" id="c-desc"></div><div class="field-actions"><button class="polish-btn" type="button">✨ AI 润色</button></div></div>
+<div class="row">
+<div class="field"><label>性格 personality</label><textarea id="f-pers"></textarea><div class="field-actions"><button class="polish-btn" type="button">✨ AI 润色</button></div></div>
+<div class="field"><label>场景 scenario</label><textarea id="f-scen"></textarea><div class="field-actions"><button class="polish-btn" type="button">✨ AI 润色</button></div></div>
+</div>
+<div class="field"><label>对话示例 mes_example</label><textarea id="f-mesex"></textarea><div class="field-actions"><button class="polish-btn" type="button">✨ AI 润色</button></div></div>
+<div class="field"><label>系统提示 system_prompt</label><textarea id="f-sys"></textarea></div>
+<div class="field"><label>历史后指令 post_history_instructions</label><textarea id="f-posth" style="min-height:120px"></textarea></div>
+<div class="field"><label>创作者备注 creator_notes</label><textarea id="f-cnotes"></textarea></div>
+</div>
+<!-- 开场白 -->
+<div class="pane" id="pane-greet">
+<div class="note"><b>写给第一次相遇：</b>第一条是主开场白，其余是备用开场白。把它当成角色主动伸手的那一刻，写出声音、动作和氛围就好。</div>
+<div class="greet-layout">
+<div class="greet-nav" id="greetList"></div>
+<div class="greet-editor" id="greetEditor"></div>
+</div>
+<div class="add-row"><button class="btn" id="btnAddGreet">＋ 添加备用开场白</button></div>
+</div>
+<!-- 世界书 -->
+<div class="pane" id="pane-book">
+<div aria-live="polite" class="import-review" hidden="" id="bookImportReview" role="region">
+<div class="import-review-copy">
+<strong id="bookImportTitle"></strong>
+<span id="bookImportMeta"></span>
+</div>
+<div class="import-review-actions">
+<button class="btn primary" id="btnBookMerge">合并词条</button>
+<button class="btn danger" id="btnBookReplace">替换当前世界书</button>
+<button class="btn" id="btnBookCancel">取消导入</button>
+</div>
+</div>
+<div class="toolbar">
+<input id="bookSearch" placeholder="搜索标题 / 关键词 / 内容…" type="text"/>
+<label class="chk"><input id="bookOnlyOn" type="checkbox"/> 只看启用</label>
+<button class="btn" id="btnAddEntry">＋ 新增词条</button>
+<button class="btn" id="btnExpandAll">展开/收起全部</button>
+</div>
+<div id="bookList"></div>
+</div>
+<!-- 正则 -->
+<div class="pane" id="pane-regex">
+<div class="note"><b>正则：</b>正则脚本是独立的 <span class="mono">.json</span> 文件（不在角色卡里）。点右上角「打开正则」加载。保存时会导出成酒馆可导入的格式。</div>
+<div id="regexList"></div>
+<div class="add-row"><button class="btn" id="btnAddRegex">＋ 新增正则</button></div>
+</div>
+<!-- 原始 JSON -->
+<div class="pane" id="pane-raw">
+<div class="note"><b>高级：</b>这里是当前对象的完整 JSON。改完点「应用到编辑器」会校验并回填。谨慎操作，格式错误无法应用。</div>
+<div class="toolbar">
+<select id="rawTarget" style="max-width:200px"><option value="card">角色卡</option><option value="regex">正则</option></select>
+<button class="btn" id="btnRawApply">应用到编辑器</button>
+<button class="btn" id="btnRawReload">重新载入当前数据</button>
+</div>
+<textarea class="raw-area" id="rawArea" spellcheck="false"></textarea>
+</div>
+</div>
+<!-- AI 设置弹窗 -->
+<div class="overlay" id="ovSettings">
+<div class="modal" style="max-width:760px">
+<div class="modal-head"><h2>⚙ AI 设置 · 中转站 / 提示词 / 破甲词</h2><button class="x" data-close="ovSettings">×</button></div>
+<div class="modal-body">
+<div class="sec">
+<h3>中转站 API<span class="line"></span></h3>
+<div class="note">兼容 OpenAI 格式的中转站（<span class="mono">/v1/chat/completions</span>）。密钥仅保存在本机浏览器 localStorage，请勿在公用电脑使用。</div>
+<div class="field"><label>接口地址 Base URL <span class="hint">(如 https://api.xxx.com 或 .../v1)</span></label><input class="mono" id="apiBase" placeholder="https://api.example.com/v1" type="text"/></div>
+<div class="field"><label>API Key</label><input class="mono" id="apiKey" placeholder="sk-..." type="text"/></div>
+<div class="row">
+<div class="field" style="flex:2"><label>模型 model</label>
+<div style="display:flex;gap:8px"><input class="mono" id="apiModel" placeholder="claude-opus-4-8" style="flex:1" type="text"/><button class="btn" id="btnFetchModels" style="white-space:nowrap">拉取模型</button></div>
+<select id="apiModelList" style="margin-top:6px;display:none"></select>
+</div>
+</div>
+<div class="row">
+<div class="field" style="max-width:140px"><label>temperature</label><input class="mono" id="apiTemp" placeholder="0.8" type="text"/></div>
+<div class="field" style="max-width:150px"><label>max_tokens</label><input class="mono" id="apiMaxTok" placeholder="4096" type="text"/></div>
+<div class="field" style="display:flex;align-items:flex-end"><button class="btn" id="btnTestApi">测试连接</button><span class="mini" id="apiTestResult" style="margin-left:10px"></span></div>
+</div>
+</div>
+<div class="sec">
+<h3>提示词库 Prompts<span class="line"></span>
+<button class="btn" id="btnAddPrompt" style="padding:3px 10px;font-size:12px">＋ 新增</button>
+<button class="btn" id="btnImportPrompt" style="padding:3px 10px;font-size:12px">导入</button>
+<button class="btn" id="btnExportPrompt" style="padding:3px 10px;font-size:12px">导出</button>
+</h3>
+<div class="mini" style="margin-bottom:8px">存放系统提示词 / 写卡指令，润色时可选用。支持导入 JSON 数组、酒馆预设（含 prompts）或纯文本。</div>
+<div id="promptLib"></div>
+</div>
+<div class="sec">
+<h3>破甲词库 Jailbreaks<span class="line"></span>
+<button class="btn" id="btnAddJb" style="padding:3px 10px;font-size:12px">＋ 新增</button>
+<button class="btn" id="btnImportJb" style="padding:3px 10px;font-size:12px">导入</button>
+<button class="btn" id="btnExportJb" style="padding:3px 10px;font-size:12px">导出</button>
+</h3>
+<div class="mini" style="margin-bottom:8px">存放破甲 / 越狱前缀，润色时作为额外系统消息注入。</div>
+<div id="jbLib"></div>
+</div>
+</div>
+<div class="modal-foot"><button class="btn primary" data-close="ovSettings">完成</button></div>
+</div>
+</div>
+<!-- AI 润色弹窗 -->
+<div class="overlay" id="ovPolish">
+<div class="modal" style="max-width:820px">
+<div class="modal-head"><h2>✨ AI 润色 · <span id="polishField" style="color:var(--accent)"></span></h2><button class="x" data-close="ovPolish">×</button></div>
+<div class="modal-body">
+<div class="row">
+<div class="field"><label>提示词 Prompt</label><select id="polishPrompt"></select></div>
+<div class="field"><label>破甲词 Jailbreak</label><select id="polishJb"></select></div>
+</div>
+<div class="field"><label>润色指令 <span class="hint">(告诉 AI 怎么改)</span></label><textarea id="polishInstruct" style="min-height:60px"></textarea></div>
+<div class="grid2">
+<div class="field"><label>原文</label><textarea id="polishSrc" readonly="" style="min-height:220px"></textarea></div>
+<div class="field"><label>润色结果 <span class="hint">(可再编辑)</span></label><textarea id="polishOut" placeholder="点「开始润色」生成…" style="min-height:220px"></textarea></div>
+</div>
+</div>
+<div class="modal-foot">
+<span class="mini" id="polishStatus" style="margin-right:auto"></span>
+<button class="btn" id="btnPolishRun">开始润色</button>
+<button class="btn" data-close="ovPolish">取消</button>
+<button class="btn primary" id="btnPolishApply">应用结果</button>
+</div>
+</div>
+</div>
+<!-- 提取模板弹窗 -->
+<div class="overlay" id="ovTemplate">
+<div class="modal" style="max-width:560px">
+<div class="modal-head"><h2>🧬 提取模板</h2><button class="x" data-close="ovTemplate">×</button></div>
+<div class="modal-body">
+<div class="note">把当前成品卡抽成可复用的空白骨架：保留结构与字段，清空正文内容。下载为新文件，不改动当前卡。</div>
+<div class="sec" style="margin-bottom:0">
+<label class="chk" style="display:flex;margin-bottom:10px"><input id="tplDescSkeleton" type="checkbox"/> 保留 description 里的 YAML 字段名 / 层级，只清空值 <span class="mini">（推荐，适合仿写同款结构）</span></label>
+<label class="chk" style="display:flex;margin-bottom:10px"><input id="tplGreet" type="checkbox"/> 清空开场白正文（保留条数占位）</label>
+<label class="chk" style="display:flex;margin-bottom:10px"><input id="tplBookContent" type="checkbox"/> 清空世界书词条内容（保留标题 / 关键词结构）</label>
+<label class="chk" style="display:flex;margin-bottom:10px"><input id="tplKeepRegex" type="checkbox"/> 保留正则脚本（播放器 / 状态栏等组件可复用）</label>
+<label class="chk" style="display:flex;margin-bottom:10px"><input id="tplKeepMeta" type="checkbox"/> 保留作者 / 版本 / 标签等元信息</label>
+</div>
+</div>
+<div class="modal-foot"><button class="btn" data-close="ovTemplate">取消</button><button class="btn primary" id="btnTemplateGo">生成并下载模板</button></div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+  "use strict";
+  var card=null, cardHandle=null, cardFileName="";
+  var regex=null, regexHandle=null, regexFileName="";  // regex: {arr:[...], wasArray:bool}
+  var pendingBookImport=null;
+  var dirty=false;
+  var hasFSA = 'showOpenFilePicker' in window;
+  var LAST_DB="cce_last_files", lastFileMeta={card:null,regex:null};
+
+  var $=function(id){return document.getElementById(id);};
+  function toast(msg,type){var t=$("toast");t.textContent=msg;t.className="toast show"+(type?(" "+type):"");clearTimeout(t._t);t._t=setTimeout(function(){t.className="toast";},2200);}
+  function setDirty(v){dirty=v;$("dirty").textContent=v?"● 有未保存改动":"";$("btnSave").disabled=!v||(!card&&!regex);if(v){try{if(card)localStorage.setItem("cce_last_file_cache_card",JSON.stringify({name:cardFileName||"上次角色卡.json",text:serializeCard(),savedAt:Date.now()}));if(regex)localStorage.setItem("cce_last_file_cache_regex",JSON.stringify({name:regexFileName||"上次正则.json",text:serializeRegex(),savedAt:Date.now()}));}catch(e){}}}
+  function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+  /* ---------- 文件读取 ---------- */
+  function idbOpen(){return new Promise(function(resolve,reject){if(!window.indexedDB){resolve(null);return;}var req=indexedDB.open(LAST_DB,1);req.onupgradeneeded=function(){req.result.createObjectStore("files");};req.onsuccess=function(){resolve(req.result);};req.onerror=function(){reject(req.error);};});}
+  async function rememberLast(kind,handle,name,text){
+    lastFileMeta[kind]={name:name||""};
+    try{localStorage.setItem("cce_last_file_meta",JSON.stringify(lastFileMeta));}catch(e){}
+    try{localStorage.setItem("cce_last_file_cache_"+kind,JSON.stringify({name:name||"",text:String(text||""),savedAt:Date.now()}));}catch(e){}
+    if(!handle)return;
+    try{var db=await idbOpen();if(!db)return;await new Promise(function(res,rej){var tx=db.transaction("files","readwrite");tx.objectStore("files").put({handle:handle,name:name||""},kind);tx.oncomplete=res;tx.onerror=function(){rej(tx.error);};});db.close();}catch(e){}
+  }
+  async function readRemembered(kind){
+    try{var db=await idbOpen();if(!db)return null;var rec=await new Promise(function(res,rej){var tx=db.transaction("files","readonly"),rq=tx.objectStore("files").get(kind);rq.onsuccess=function(){res(rq.result||null);};rq.onerror=function(){rej(rq.error);};});db.close();if(!rec||!rec.handle)return null;var perm=await rec.handle.queryPermission({mode:"read"});if(perm!=="granted")return null;var f=await rec.handle.getFile();return {text:await f.text(),handle:rec.handle,name:f.name||rec.name};}catch(e){return null;}
+  }
+  async function restoreLastFiles(){
+    if(!hasFSA)return;
+    try{var saved=JSON.parse(localStorage.getItem("cce_last_file_meta")||"null");if(saved&&typeof saved==="object")lastFileMeta=saved;}catch(e){}
+    var r=await readRemembered("card");
+    if(!r){try{var cachedCard=JSON.parse(localStorage.getItem("cce_last_file_cache_card")||"null");if(cachedCard&&cachedCard.text)r={text:cachedCard.text,handle:null,name:cachedCard.name||"上次角色卡.json",cached:true};}catch(e){}}
+    if(r){var obj;try{obj=JSON.parse(r.text);}catch(e){obj=null;}if(obj){if(!obj.data&&obj.name!==undefined)obj={spec:"chara_card_v3",spec_version:"3.0",data:obj};if(obj.data){card=obj;cardHandle=r.handle;cardFileName=r.name;fillCard();showUI();setDirty(false);}}}
+    var x=await readRemembered("regex");
+    if(!x){try{var cachedRegex=JSON.parse(localStorage.getItem("cce_last_file_cache_regex")||"null");if(cachedRegex&&cachedRegex.text)x={text:cachedRegex.text,handle:null,name:cachedRegex.name||"上次正则.json",cached:true};}catch(e){}}
+    if(x){var ro;try{ro=JSON.parse(x.text);}catch(e){ro=null;}var arr,wa;if(Array.isArray(ro)){arr=ro;wa=true;}else if(ro&&(ro.findRegex!==undefined||ro.scriptName!==undefined)){arr=[ro];wa=false;}if(arr){regex={arr:arr,wasArray:wa};regexHandle=x.handle;regexFileName=x.name;if(!card)showUI();setDirty(false);}}
+    if(r||x)toast((r&&r.cached)||(x&&x.cached)?"已从本地文件库恢复":"已恢复上次打开的文件");
+    else if(lastFileMeta.card||lastFileMeta.regex)toast("检测到上次文件，请重新授权后即可自动恢复");
+  }
+  async function pickAndRead(kind){
+    if(hasFSA){
+      try{
+        var [h]=await window.showOpenFilePicker({types:[{description:"JSON",accept:{"application/json":[".json"]}}]});
+        var f=await h.getFile();
+        var text=await f.text();
+        return {text:text,handle:h,name:f.name};
+      }catch(e){ if(e && e.name==='AbortError') return null; /* fall through */ }
+    }
+    // fallback: hidden input
+    return await new Promise(function(res){
+      var inp=document.createElement("input");inp.type="file";inp.accept=".json,application/json";
+      inp.onchange=function(){var f=inp.files[0];if(!f){res(null);return;}var r=new FileReader();r.onload=function(){res({text:r.result,handle:null,name:f.name});};r.readAsText(f,"utf-8");};
+      inp.click();
+    });
+  }
+
+  $("btnOpen").onclick=async function(){
+    var r=await pickAndRead("card"); if(!r)return;
+    var obj; try{obj=JSON.parse(r.text);}catch(e){toast("JSON 解析失败："+e.message,"err");return;}
+    // 兼容两种结构：{spec,data} 或 直接是 data
+    if(!obj.data && obj.name!==undefined){ obj={spec:"chara_card_v3",spec_version:"3.0",data:obj}; }
+    if(!obj.data){toast("这不像角色卡（没有 data 字段）。是正则的话用「打开正则」。","err");return;}
+    clearPendingBookImport();
+    card=obj; cardHandle=r.handle; cardFileName=r.name; rememberLast("card",r.handle,r.name,r.text);
+    fillCard(); showUI(); switchTab("info");
+    toast("已载入："+r.name,"ok");
+    setDirty(false);
+  };
+
+  $("btnOpenRegex").onclick=async function(){
+    var r=await pickAndRead("regex"); if(!r)return;
+    var obj; try{obj=JSON.parse(r.text);}catch(e){toast("JSON 解析失败："+e.message,"err");return;}
+    var arr, wasArray;
+    if(Array.isArray(obj)){arr=obj;wasArray=true;}
+    else if(obj && (obj.findRegex!==undefined||obj.scriptName!==undefined)){arr=[obj];wasArray=false;}
+    else {toast("这不像正则脚本文件。","err");return;}
+    regex={arr:arr,wasArray:wasArray}; regexHandle=r.handle; regexFileName=r.name; rememberLast("regex",r.handle,r.name,r.text);
+    fillRegex(); showUI(); switchTab("regex");
+    toast("已载入正则："+r.name+"（"+arr.length+"条）","ok");
+    setDirty(false);
+  };
+
+  function showUI(){
+    $("empty").style.display="none";
+    $("tabs").style.display="flex";
+    $("btnBackup").disabled=false;
+    $("btnImportBook").disabled=!card;
+    $("btnImportBook").title=card?"导入独立世界书 JSON":"请先打开角色卡";
+    $("btnTemplate").disabled=!card;
+    $("btnTemplate").title=card?"从当前角色卡提取空白模板":"请先打开角色卡";
+    var parts=[];
+    if(cardFileName)parts.push(cardFileName);
+    if(regexFileName)parts.push(regexFileName);
+    var fp=$("filepill");fp.style.display=parts.length?"inline-block":"none";fp.textContent=parts.join(" + ");fp.title=parts.join("  |  ");
+  }
+
+  /* ---------- 角色信息 ---------- */
+  function fillCard(){
+    if(!card)return; var d=card.data;
+    $("f-name").value=d.name||"";
+    $("f-creator").value=d.creator||"";
+    $("f-cver").value=d.character_version||"";
+    $("f-talk").value=(d.extensions&&d.extensions.talkativeness!=null)?d.extensions.talkativeness:"";
+    $("f-tags").value=(d.tags||[]).join(", ");
+    $("f-desc").value=d.description||"";
+    $("f-pers").value=d.personality||"";
+    $("f-scen").value=d.scenario||"";
+    $("f-mesex").value=d.mes_example||"";
+    $("f-sys").value=d.system_prompt||"";
+    $("f-posth").value=d.post_history_instructions||"";
+    $("f-cnotes").value=d.creator_notes||"";
+    $("c-desc").textContent=(d.description||"").length+" 字符";
+    fillGreet(); fillBook();
+  }
+  function bindCardFields(){
+    var map={"f-name":"name","f-creator":"creator","f-cver":"character_version","f-desc":"description",
+      "f-pers":"personality","f-scen":"scenario","f-mesex":"mes_example","f-sys":"system_prompt",
+      "f-posth":"post_history_instructions","f-cnotes":"creator_notes"};
+    Object.keys(map).forEach(function(id){
+      $(id).addEventListener("input",function(){ if(!card)return; card.data[map[id]]=$(id).value; if(id==="f-desc")$("c-desc").textContent=$(id).value.length+" 字符"; setDirty(true); });
+    });
+    $("f-tags").addEventListener("input",function(){ if(!card)return; card.data.tags=$("f-tags").value.split(",").map(function(s){return s.trim();}).filter(Boolean); setDirty(true); });
+    $("f-talk").addEventListener("input",function(){ if(!card)return; if(!card.data.extensions)card.data.extensions={}; card.data.extensions.talkativeness=$("f-talk").value; setDirty(true); });
+  }
+
+  /* ---------- 开场白 ---------- */
+  var greetActive=-1;
+  function fillGreet(){
+    if(!card)return; var d=card.data;
+    if(!Array.isArray(d.alternate_greetings))d.alternate_greetings=[];
+    var host=$("greetList"), editor=$("greetEditor");host.innerHTML=""; editor.innerHTML="";
+    var items=[{title:"主开场白",value:d.first_mes||"",idx:-1}];
+    d.alternate_greetings.forEach(function(g,i){items.push({title:"备用开场白 "+String(i+1).padStart(2,"0"),value:g||"",idx:i});});
+    if(!items.some(function(it){return it.idx===greetActive;}))greetActive=items[0].idx;
+    var navTitle=document.createElement("div");navTitle.className="greet-nav-title";navTitle.textContent="开场白列表 · "+items.length;host.appendChild(navTitle);
+    items.forEach(function(it){
+      var b=document.createElement("button");b.type="button";b.className="greet-nav-item"+(it.idx===greetActive?" active":"");
+      var dot=document.createElement("span");dot.className="nav-dot";
+      var copy=document.createElement("span");copy.className="nav-copy";
+      var name=document.createElement("span");name.className="nav-name";name.textContent=it.title;
+      var meta=document.createElement("span");meta.className="nav-meta";meta.textContent=it.value.length+" 字";
+      copy.appendChild(name);copy.appendChild(meta);b.appendChild(dot);b.appendChild(copy);
+      b.onclick=function(){greetActive=it.idx;fillGreet();}; host.appendChild(b);
+    });
+    var current=items.find(function(it){return it.idx===greetActive;})||items[0];
+    renderGreetEditor(current);
+    $("cntGreet").textContent="("+(1+d.alternate_greetings.length)+")";
+  }
+  function renderGreetEditor(item){
+    var host=$("greetEditor");
+    var head=document.createElement("div");head.className="greet-editor-head";
+    var title=document.createElement("div");title.className="greet-editor-title";title.textContent=item.title;
+    var cnt=document.createElement("span");cnt.className="meta";cnt.textContent=item.value.length+" 字";
+    head.appendChild(title);head.appendChild(cnt);
+    var body=document.createElement("div");body.className="greet-editor-body";
+    var ta=document.createElement("textarea");ta.value=item.value;ta.placeholder="从一个动作、一个声音或一句自然的话开始……";
+    ta.addEventListener("input",function(){ if(item.idx<0)card.data.first_mes=ta.value; else card.data.alternate_greetings[item.idx]=ta.value; cnt.textContent=ta.value.length+" 字"; var n=$("greetList").querySelector(".greet-nav-item.active .nav-meta");if(n)n.textContent=ta.value.length+" 字"; setDirty(true); });
+    body.appendChild(ta);
+    var foot=document.createElement("div");foot.className="greet-editor-foot";
+    var pb=document.createElement("button");pb.type="button";pb.className="polish-btn";pb.textContent="✨ AI 润色";pb.style.padding="5px 12px";
+    pb.onclick=function(){ if(window.__ccePolish)window.__ccePolish(item.title,function(){return ta.value;},function(v){ta.value=v;ta.dispatchEvent(new Event("input",{bubbles:true}));}); };
+    foot.appendChild(pb);
+    if(item.idx>=0){
+      var del=document.createElement("button");del.className="btn danger";del.style.padding="3px 10px";del.style.fontSize="12px";del.textContent="删除";
+      del.onclick=function(){ if(!confirm("删除该备用开场白？")) return; card.data.alternate_greetings.splice(item.idx,1); greetActive=-1; fillGreet(); setDirty(true); };
+      foot.appendChild(del);
+    }
+    host.appendChild(head);host.appendChild(body);host.appendChild(foot);
+  }
+  $("btnAddGreet").onclick=function(){ if(!card)return; card.data.alternate_greetings.push("");
+    greetActive=card.data.alternate_greetings.length-1; fillGreet(); setDirty(true);
+    $("greetEditor").querySelector("textarea").focus(); };
+
+  /* ---------- 世界书 ---------- */
+  var expandedAll=false;
+  function deepClone(obj){return JSON.parse(JSON.stringify(obj));}
+  function asKeyList(value){
+    if(Array.isArray(value))return value.map(function(v){return String(v).trim();}).filter(Boolean);
+    if(value==null||value==="")return [];
+    return String(value).split(/[,，]/).map(function(v){return v.trim();}).filter(Boolean);
+  }
+  function asEntryArray(value){
+    if(Array.isArray(value))return value;
+    if(!value||typeof value!=="object")return null;
+    return Object.keys(value).map(function(key){
+      var entry=deepClone(value[key]);
+      if(entry&&typeof entry==="object"&&entry.id==null&&entry.uid==null&&/^\d+$/.test(key))entry.id=parseInt(key,10);
+      return entry;
+    });
+  }
+  function extensionValue(entry,ext,key,legacyKey,defaultValue){
+    if(ext[key]!==undefined)return ext[key];
+    if(entry[legacyKey]!==undefined)return entry[legacyKey];
+    return defaultValue;
+  }
+  function normalizeBookEntry(raw,index){
+    if(!raw||typeof raw!=="object"||Array.isArray(raw))return null;
+    var entry=deepClone(raw);
+    var sourcePosition=entry.position;
+    entry.id=entry.id!=null?entry.id:(entry.uid!=null?entry.uid:index);
+    entry.keys=asKeyList(entry.keys!==undefined?entry.keys:entry.key);
+    entry.secondary_keys=asKeyList(entry.secondary_keys!==undefined?entry.secondary_keys:entry.keysecondary);
+    entry.comment=entry.comment!=null?String(entry.comment):(entry.memo!=null?String(entry.memo):"");
+    entry.content=entry.content!=null?String(entry.content):"";
+    entry.constant=!!entry.constant;
+    entry.selective=entry.selective!==undefined?!!entry.selective:true;
+    entry.insertion_order=Number.isFinite(Number(entry.insertion_order))?Number(entry.insertion_order):(Number.isFinite(Number(entry.order))?Number(entry.order):100);
+    entry.enabled=entry.enabled!==undefined?!!entry.enabled:(entry.disable!==undefined?!entry.disable:(entry.disabled!==undefined?!entry.disabled:true));
+    if(typeof entry.position!=="string")entry.position=Number(entry.position)===0?"before_char":"after_char";
+    entry.use_regex=entry.use_regex!==undefined?!!entry.use_regex:false;
+    var ext=entry.extensions&&typeof entry.extensions==="object"&&!Array.isArray(entry.extensions)?deepClone(entry.extensions):{};
+    if(ext.position===undefined)ext.position=typeof sourcePosition==="number"?sourcePosition:(entry.position==="before_char"?0:1);
+    ext.exclude_recursion=extensionValue(entry,ext,"exclude_recursion","excludeRecursion",false);
+    ext.display_index=extensionValue(entry,ext,"display_index","displayIndex",index);
+    ext.probability=extensionValue(entry,ext,"probability","probability",100);
+    ext.useProbability=extensionValue(entry,ext,"useProbability","useProbability",true);
+    ext.depth=extensionValue(entry,ext,"depth","depth",4);
+    ext.selectiveLogic=extensionValue(entry,ext,"selectiveLogic","selectiveLogic",0);
+    ext.group=extensionValue(entry,ext,"group","group","");
+    ext.group_override=extensionValue(entry,ext,"group_override","groupOverride",false);
+    ext.group_weight=extensionValue(entry,ext,"group_weight","groupWeight",100);
+    ext.prevent_recursion=extensionValue(entry,ext,"prevent_recursion","preventRecursion",false);
+    ext.delay_until_recursion=extensionValue(entry,ext,"delay_until_recursion","delayUntilRecursion",false);
+    ext.scan_depth=extensionValue(entry,ext,"scan_depth","scanDepth",null);
+    ext.match_whole_words=extensionValue(entry,ext,"match_whole_words","matchWholeWords",null);
+    ext.use_group_scoring=extensionValue(entry,ext,"use_group_scoring","useGroupScoring",false);
+    ext.case_sensitive=extensionValue(entry,ext,"case_sensitive","caseSensitive",null);
+    ext.automation_id=extensionValue(entry,ext,"automation_id","automationId","");
+    ext.role=extensionValue(entry,ext,"role","role",0);
+    ext.vectorized=extensionValue(entry,ext,"vectorized","vectorized",false);
+    ext.sticky=extensionValue(entry,ext,"sticky","sticky",0);
+    ext.cooldown=extensionValue(entry,ext,"cooldown","cooldown",0);
+    ext.delay=extensionValue(entry,ext,"delay","delay",0);
+    ext.triggers=extensionValue(entry,ext,"triggers","triggers",[]);
+    ext.ignore_budget=extensionValue(entry,ext,"ignore_budget","ignoreBudget",false);
+    entry.extensions=ext;
+    return entry;
+  }
+  function extractWorldBook(obj,fileName){
+    var source=null;
+    // 部分独立世界书同时保存 entries 镜像与 originalData；优先只读后者，避免重复导入。
+    if(obj&&obj.originalData&&obj.originalData.entries!=null)source=obj.originalData;
+    else if(obj&&obj.data&&obj.data.character_book&&obj.data.character_book.entries!=null)source=obj.data.character_book;
+    else if(obj&&obj.character_book&&obj.character_book.entries!=null)source=obj.character_book;
+    else if(obj&&obj.worldbook&&obj.worldbook.entries!=null)source=obj.worldbook;
+    else if(obj&&obj.entries!=null)source=obj;
+    if(!source)return null;
+    var rawEntries=asEntryArray(source.entries);
+    if(!rawEntries)return null;
+    var invalidCount=0;
+    var entries=rawEntries.map(function(entry,index){return normalizeBookEntry(entry,index);}).filter(function(entry){if(entry)return true;invalidCount++;return false;});
+    var meta=deepClone(source);delete meta.entries;
+    return {name:source.name||fileName.replace(/\.json$/i,""),entries:entries,meta:meta,invalidCount:invalidCount,fileName:fileName};
+  }
+  function entrySignature(entry){
+    return JSON.stringify([
+      String(entry.comment||"").trim(),String(entry.content||"").trim(),
+      asKeyList(entry.keys).slice().sort(),asKeyList(entry.secondary_keys).slice().sort(),
+      !!entry.constant,!!entry.selective,entry.position||"after_char",Number(entry.insertion_order)||0
+    ]);
+  }
+  function prepareImportedEntries(entries,existing,skipExisting){
+    var existingSignatures=new Set(skipExisting?existing.map(entrySignature):[]);
+    var incomingSignatures=new Set();
+    var filtered=[];var duplicateCount=0;
+    entries.forEach(function(entry){
+      var sig=entrySignature(entry);
+      if(incomingSignatures.has(sig)||existingSignatures.has(sig)){duplicateCount++;return;}
+      incomingSignatures.add(sig);filtered.push(deepClone(entry));
+    });
+    var usedIds=new Set(existing.map(function(entry){return String(entry.id);}));
+    var numericIds=existing.concat(filtered).map(function(entry){return Number(entry.id);}).filter(function(id){return Number.isInteger(id)&&id>=0;});
+    var nextId=Math.max.apply(Math,[999].concat(numericIds))+1;
+    var idChangeCount=0;
+    filtered.forEach(function(entry){
+      var idKey=entry.id==null?"":String(entry.id);
+      if(!idKey||usedIds.has(idKey)){
+        while(usedIds.has(String(nextId)))nextId++;
+        entry.id=nextId++;idChangeCount++;
+      }
+      usedIds.add(String(entry.id));
+    });
+    return {entries:filtered,duplicateCount:duplicateCount,idChangeCount:idChangeCount};
+  }
+  function clearPendingBookImport(){
+    pendingBookImport=null;
+    $("bookImportReview").hidden=true;
+  }
+  function showBookImportReview(info){
+    pendingBookImport=info;
+    $("bookImportTitle").textContent="待导入："+info.fileName;
+    $("bookImportMeta").textContent="识别到 "+info.entries.length+" 条词条，当前世界书有 "+card.data.character_book.entries.length+" 条。合并会跳过重复词条并处理 ID 冲突；替换会覆盖当前世界书。";
+    $("bookImportReview").hidden=false;
+    switchTab("book");
+    $("btnBookMerge").focus();
+  }
+  function applyWorldBookImport(mode){
+    if(!card||!pendingBookImport)return;
+    var info=pendingBookImport;
+    var current=card.data.character_book&&Array.isArray(card.data.character_book.entries)?card.data.character_book.entries:[];
+    var result=prepareImportedEntries(info.entries,mode==="merge"?current:[],mode==="merge");
+    if(mode==="merge"&&result.entries.length===0){
+      clearPendingBookImport();
+      toast("未导入：这些词条已存在。","err");
+      return;
+    }
+    if(mode==="merge"){
+      if(!card.data.character_book)card.data.character_book={name:card.data.name||"",entries:[]};
+      card.data.character_book.entries=current.concat(result.entries);
+      if(!card.data.character_book.name&&info.name)card.data.character_book.name=info.name;
+    }else{
+      var nextBook=deepClone(info.meta||{});
+      nextBook.name=info.name||(card.data.character_book&&card.data.character_book.name)||card.data.name||"";
+      nextBook.entries=result.entries;
+      card.data.character_book=nextBook;
+    }
+    clearPendingBookImport();
+    $("bookSearch").value="";$("bookOnlyOn").checked=false;
+    fillBook();switchTab("book");setDirty(true);
+    var message=(mode==="merge"?"已合并 ":(current.length?"已替换为 ":"已导入 "))+result.entries.length+" 条词条";
+    if(result.duplicateCount)message+="，跳过 "+result.duplicateCount+" 条重复";
+    if(info.invalidCount)message+="，跳过 "+info.invalidCount+" 条无效数据";
+    if(result.idChangeCount)message+="，调整 "+result.idChangeCount+" 个 ID";
+    toast(message+"。","ok");
+  }
+  $("btnImportBook").onclick=async function(){
+    if(!card){toast("请先打开角色卡，再导入世界书。","err");return;}
+    var r=await pickAndRead("book");if(!r)return;
+    var obj;try{obj=JSON.parse(r.text);}catch(e){toast("世界书 JSON 解析失败："+e.message,"err");return;}
+    var info=extractWorldBook(obj,r.name);
+    if(!info){toast("没有识别到世界书词条。支持独立世界书或含 character_book 的角色卡。","err");return;}
+    if(!info.entries.length){toast("这个世界书没有可导入的词条。","err");return;}
+    if(!card.data.character_book)card.data.character_book={name:card.data.name||"",entries:[]};
+    if(!Array.isArray(card.data.character_book.entries))card.data.character_book.entries=[];
+    pendingBookImport=info;
+    if(card.data.character_book.entries.length)showBookImportReview(info);
+    else applyWorldBookImport("replace");
+  };
+  $("btnBookMerge").onclick=function(){applyWorldBookImport("merge");};
+  $("btnBookReplace").onclick=function(){applyWorldBookImport("replace");};
+  $("btnBookCancel").onclick=function(){clearPendingBookImport();toast("已取消导入。");};
+  function fillBook(){
+    if(!card)return;
+    if(!card.data.character_book)card.data.character_book={name:card.data.name||"",entries:[]};
+    if(!Array.isArray(card.data.character_book.entries))card.data.character_book.entries=[];
+    renderBook();
+    $("cntBook").textContent="("+card.data.character_book.entries.length+")";
+  }
+  function renderBook(){
+    var entries=card.data.character_book.entries;
+    var q=($("bookSearch").value||"").trim().toLowerCase();
+    var onlyOn=$("bookOnlyOn").checked;
+    var host=$("bookList");host.innerHTML="";
+    var shown=0;
+    entries.forEach(function(e,i){
+      if(onlyOn && !e.enabled)return;
+      if(q){
+        var hay=((e.comment||"")+" "+(e.keys||[]).join(" ")+" "+(e.content||"")).toLowerCase();
+        if(hay.indexOf(q)<0)return;
+      }
+      host.appendChild(entryCard(e,i));shown++;
+    });
+    if(shown===0){var d=document.createElement("div");d.className="empty";d.style.padding="40px";d.textContent=entries.length?"没有匹配的词条。":"还没有词条，点「新增词条」添加。";host.appendChild(d);}
+  }
+  function entryCard(e,idx){
+    var wrap=document.createElement("div");wrap.className="card-item"+(e.enabled?"":" disabled")+(expandedAll?" open":"");
+    // 头部
+    var head=document.createElement("div");head.className="card-head";
+    var arrow=document.createElement("span");arrow.className="arrow";arrow.textContent="▶";
+    var title=document.createElement("span");title.className="title";title.textContent=e.comment||("(无标题 id="+e.id+")");
+    var meta=document.createElement("span");meta.className="meta";meta.textContent="id "+e.id;
+    head.appendChild(arrow);head.appendChild(title);
+    if(e.constant){var b=document.createElement("span");b.className="badge blue";b.textContent="常驻";head.appendChild(b);}
+    else if((e.keys||[]).length){var b2=document.createElement("span");b2.className="badge";b2.textContent="关键词 "+e.keys.length;head.appendChild(b2);}
+    var bon=document.createElement("span");bon.className="badge "+(e.enabled?"on":"");bon.textContent=e.enabled?"启用":"停用";head.appendChild(bon);
+    head.appendChild(meta);
+    head.onclick=function(ev){ if(ev.target.tagName==="BUTTON")return; wrap.classList.toggle("open"); };
+    // 主体
+    var body=document.createElement("div");body.className="card-body";
+    body.innerHTML=
+      '<div class="field"><label>标题 / 备注 comment</label><input type="text" data-k="comment"></div>'+
+      '<div class="row">'+
+        '<div class="field"><label>关键词 keys <span class="hint">(逗号分隔，常驻词条可留空)</span></label><input type="text" data-k="keys"></div>'+
+        '<div class="field" style="max-width:120px"><label>排序 order</label><input type="text" class="mono" data-k="insertion_order"></div>'+
+      '</div>'+
+      '<div class="field"><label>内容 content</label><textarea data-k="content" style="min-height:160px"></textarea><div class="count" data-c="content"></div></div>'+
+      '<div class="row" style="align-items:center">'+
+        '<label class="chk"><input type="checkbox" data-k="enabled"> 启用 enabled</label>'+
+        '<label class="chk"><input type="checkbox" data-k="constant"> 常驻/蓝灯 constant</label>'+
+        '<label class="chk"><input type="checkbox" data-k="selective"> selective</label>'+
+        '<label class="chk"><input type="checkbox" data-k="use_regex"> use_regex</label>'+
+        '<div class="field" style="max-width:150px;margin:0"><label>position</label><select data-k="position"><option value="before_char">before_char</option><option value="after_char">after_char</option></select></div>'+
+      '</div>'+
+      '<details class="adv"><summary>高级字段（extensions：depth / probability / role 等，原样保留）</summary><textarea data-k="__ext"></textarea></details>'+
+      '<div style="text-align:right;margin-top:10px"><button class="btn danger" data-act="del">删除此词条</button></div>';
+    // 填值
+    body.querySelector('[data-k="comment"]').value=e.comment||"";
+    body.querySelector('[data-k="keys"]').value=(e.keys||[]).join(", ");
+    body.querySelector('[data-k="insertion_order"]').value=e.insertion_order!=null?e.insertion_order:"";
+    var taC=body.querySelector('[data-k="content"]');taC.value=e.content||"";
+    body.querySelector('[data-c="content"]').textContent=(e.content||"").length+" 字符";
+    body.querySelector('[data-k="enabled"]').checked=!!e.enabled;
+    body.querySelector('[data-k="constant"]').checked=!!e.constant;
+    body.querySelector('[data-k="selective"]').checked=!!e.selective;
+    body.querySelector('[data-k="use_regex"]').checked=!!e.use_regex;
+    body.querySelector('[data-k="position"]').value=e.position||"after_char";
+    body.querySelector('[data-k="__ext"]').value=JSON.stringify(e.extensions||{},null,2);
+    // 绑定
+    body.querySelector('[data-k="comment"]').addEventListener("input",function(){e.comment=this.value;title.textContent=this.value||("(无标题 id="+e.id+")");setDirty(true);});
+    body.querySelector('[data-k="keys"]').addEventListener("input",function(){e.keys=this.value.split(",").map(function(s){return s.trim();}).filter(Boolean);setDirty(true);});
+    body.querySelector('[data-k="insertion_order"]').addEventListener("input",function(){var n=parseInt(this.value,10);e.insertion_order=isNaN(n)?0:n;setDirty(true);});
+    taC.addEventListener("input",function(){e.content=this.value;body.querySelector('[data-c="content"]').textContent=this.value.length+" 字符";setDirty(true);});
+    (function(){var bar=document.createElement("div");bar.className="field-actions";var pb=document.createElement("button");pb.type="button";pb.className="polish-btn";pb.textContent="✨ 润色内容";pb.onclick=function(){if(window.__ccePolish)window.__ccePolish("世界书："+(e.comment||("id "+e.id)),function(){return taC.value;},function(v){taC.value=v;taC.dispatchEvent(new Event("input",{bubbles:true}));});};bar.appendChild(pb);taC.parentNode.insertBefore(bar,taC.nextSibling);})();
+    body.querySelector('[data-k="enabled"]').addEventListener("change",function(){e.enabled=this.checked;wrap.classList.toggle("disabled",!this.checked);bon.className="badge "+(this.checked?"on":"");bon.textContent=this.checked?"启用":"停用";setDirty(true);});
+    body.querySelector('[data-k="constant"]').addEventListener("change",function(){e.constant=this.checked;setDirty(true);});
+    body.querySelector('[data-k="selective"]').addEventListener("change",function(){e.selective=this.checked;setDirty(true);});
+    body.querySelector('[data-k="use_regex"]').addEventListener("change",function(){e.use_regex=this.checked;setDirty(true);});
+    body.querySelector('[data-k="position"]').addEventListener("change",function(){e.position=this.value;setDirty(true);});
+    body.querySelector('[data-k="__ext"]').addEventListener("input",function(){try{e.extensions=JSON.parse(this.value);this.style.borderColor="";setDirty(true);}catch(err){this.style.borderColor="var(--danger)";}});
+    body.querySelector('[data-act="del"]').onclick=function(){ if(!confirm('删除词条「'+(e.comment||e.id)+'」？此操作在保存后才写入文件。'))return; var arr=card.data.character_book.entries; var p=arr.indexOf(e); if(p>=0)arr.splice(p,1); fillBook(); setDirty(true); };
+    wrap.appendChild(head);wrap.appendChild(body);
+    return wrap;
+  }
+  $("bookSearch").addEventListener("input",renderBook);
+  $("bookOnlyOn").addEventListener("change",renderBook);
+  $("btnExpandAll").onclick=function(){expandedAll=!expandedAll;renderBook();};
+  $("btnAddEntry").onclick=function(){
+    if(!card)return; var entries=card.data.character_book.entries;
+    var maxId=entries.reduce(function(m,e){return Math.max(m,e.id||0);},999);
+    var ne={id:maxId+1,keys:[],secondary_keys:[],comment:"新词条",content:"",constant:false,selective:true,
+      insertion_order:100,enabled:true,position:"after_char",use_regex:false,
+      extensions:{position:1,exclude_recursion:false,display_index:entries.length,probability:100,useProbability:true,depth:4,selectiveLogic:0,group:"",group_override:false,group_weight:100,prevent_recursion:false,delay_until_recursion:false,scan_depth:null,match_whole_words:null,use_group_scoring:false,case_sensitive:null,automation_id:"",role:0,vectorized:false,sticky:0,cooldown:0,delay:0,triggers:[],ignore_budget:false}};
+    entries.unshift(ne); $("bookSearch").value="";$("bookOnlyOn").checked=false; renderBook(); $("cntBook").textContent="("+entries.length+")"; setDirty(true);
+    $("bookList").firstElementChild.classList.add("open");
+    $("bookList").firstElementChild.scrollIntoView({behavior:"smooth",block:"center"});
+  };
+
+  /* ---------- 正则 ---------- */
+  function fillRegex(){
+    if(!regex)return;
+    var host=$("regexList");host.innerHTML="";
+    regex.arr.forEach(function(r,i){ host.appendChild(regexCard(r,i)); });
+    $("cntRegex").textContent="("+regex.arr.length+")";
+  }
+  function regexCard(r,idx){
+    var wrap=document.createElement("div");wrap.className="card-item"+(r.disabled?" disabled":"");
+    var head=document.createElement("div");head.className="card-head";
+    var arrow=document.createElement("span");arrow.className="arrow";arrow.textContent="▶";
+    var title=document.createElement("span");title.className="title";title.textContent=r.scriptName||"(未命名正则)";
+    head.appendChild(arrow);head.appendChild(title);
+    if(r.markdownOnly){var b=document.createElement("span");b.className="badge blue";b.textContent="仅显示";head.appendChild(b);}
+    if(r.promptOnly){var b2=document.createElement("span");b2.className="badge";b2.textContent="仅提示";head.appendChild(b2);}
+    var bon=document.createElement("span");bon.className="badge "+(r.disabled?"":"on");bon.textContent=r.disabled?"停用":"启用";head.appendChild(bon);
+    head.onclick=function(ev){if(ev.target.tagName==="BUTTON")return;wrap.classList.toggle("open");};
+    var body=document.createElement("div");body.className="card-body";
+    body.innerHTML=
+      '<div class="field"><label>脚本名 scriptName</label><input type="text" data-k="scriptName"></div>'+
+      '<div class="field"><label>查找 findRegex</label><textarea data-k="findRegex" class="mono" style="min-height:56px"></textarea></div>'+
+      '<div class="field"><label>替换为 replaceString <span class="hint">($1 为捕获组)</span></label><textarea data-k="replaceString" class="mono" style="min-height:160px"></textarea><div class="count" data-c="rep"></div></div>'+
+      '<div class="row" style="align-items:center">'+
+        '<label class="chk"><input type="checkbox" data-k="markdownOnly"> 仅格式化显示 markdownOnly</label>'+
+        '<label class="chk"><input type="checkbox" data-k="promptOnly"> 仅影响提示 promptOnly</label>'+
+        '<label class="chk"><input type="checkbox" data-k="runOnEdit"> 编辑时运行 runOnEdit</label>'+
+        '<label class="chk"><input type="checkbox" data-k="disabled"> 停用 disabled</label>'+
+      '</div>'+
+      '<div class="row">'+
+        '<div class="field" style="max-width:160px"><label>作用域 placement</label><input type="text" class="mono" data-k="placement" placeholder="2"></div>'+
+        '<div class="field" style="max-width:120px"><label>minDepth</label><input type="text" class="mono" data-k="minDepth"></div>'+
+        '<div class="field" style="max-width:120px"><label>maxDepth</label><input type="text" class="mono" data-k="maxDepth"></div>'+
+      '</div>'+
+      '<div style="text-align:right;margin-top:10px"><button class="btn danger" data-act="del">删除此正则</button></div>';
+    body.querySelector('[data-k="scriptName"]').value=r.scriptName||"";
+    body.querySelector('[data-k="findRegex"]').value=r.findRegex||"";
+    var taR=body.querySelector('[data-k="replaceString"]');taR.value=r.replaceString||"";
+    body.querySelector('[data-c="rep"]').textContent=(r.replaceString||"").length+" 字符";
+    body.querySelector('[data-k="markdownOnly"]').checked=!!r.markdownOnly;
+    body.querySelector('[data-k="promptOnly"]').checked=!!r.promptOnly;
+    body.querySelector('[data-k="runOnEdit"]').checked=!!r.runOnEdit;
+    body.querySelector('[data-k="disabled"]').checked=!!r.disabled;
+    body.querySelector('[data-k="placement"]').value=Array.isArray(r.placement)?r.placement.join(","):(r.placement!=null?r.placement:"2");
+    body.querySelector('[data-k="minDepth"]').value=r.minDepth!=null?r.minDepth:"";
+    body.querySelector('[data-k="maxDepth"]').value=r.maxDepth!=null?r.maxDepth:"";
+    body.querySelector('[data-k="scriptName"]').addEventListener("input",function(){r.scriptName=this.value;title.textContent=this.value||"(未命名正则)";setDirty(true);});
+    body.querySelector('[data-k="findRegex"]').addEventListener("input",function(){r.findRegex=this.value;setDirty(true);});
+    taR.addEventListener("input",function(){r.replaceString=this.value;body.querySelector('[data-c="rep"]').textContent=this.value.length+" 字符";setDirty(true);});
+    body.querySelector('[data-k="markdownOnly"]').addEventListener("change",function(){r.markdownOnly=this.checked;setDirty(true);});
+    body.querySelector('[data-k="promptOnly"]').addEventListener("change",function(){r.promptOnly=this.checked;setDirty(true);});
+    body.querySelector('[data-k="runOnEdit"]').addEventListener("change",function(){r.runOnEdit=this.checked;setDirty(true);});
+    body.querySelector('[data-k="disabled"]').addEventListener("change",function(){r.disabled=this.checked;wrap.classList.toggle("disabled",this.checked);bon.className="badge "+(this.checked?"":"on");bon.textContent=this.checked?"停用":"启用";setDirty(true);});
+    body.querySelector('[data-k="placement"]').addEventListener("input",function(){r.placement=this.value.split(",").map(function(s){return parseInt(s.trim(),10);}).filter(function(n){return !isNaN(n);});setDirty(true);});
+    body.querySelector('[data-k="minDepth"]').addEventListener("input",function(){var v=this.value.trim();r.minDepth=v===""?null:(parseInt(v,10)||0);setDirty(true);});
+    body.querySelector('[data-k="maxDepth"]').addEventListener("input",function(){var v=this.value.trim();r.maxDepth=v===""?null:(parseInt(v,10)||0);setDirty(true);});
+    body.querySelector('[data-act="del"]').onclick=function(){if(!confirm('删除正则「'+(r.scriptName||"未命名")+'」？'))return;var p=regex.arr.indexOf(r);if(p>=0)regex.arr.splice(p,1);fillRegex();setDirty(true);};
+    wrap.appendChild(head);wrap.appendChild(body);
+    return wrap;
+  }
+  $("btnAddRegex").onclick=function(){
+    if(!regex){regex={arr:[],wasArray:true};regexFileName="新正则.json";showUI();}
+    regex.arr.push({id:"regex-"+Date.now(),scriptName:"新正则",findRegex:"/(pattern)/g",replaceString:"$1",trimStrings:[],placement:[2],disabled:false,markdownOnly:true,promptOnly:false,runOnEdit:true,substituteRegex:0,minDepth:null,maxDepth:null});
+    fillRegex();setDirty(true);
+    $("regexList").lastElementChild.classList.add("open");
+    $("regexList").lastElementChild.scrollIntoView({behavior:"smooth",block:"center"});
+  };
+
+  /* ---------- 原始 JSON ---------- */
+  function loadRaw(){
+    var tgt=$("rawTarget").value;
+    if(tgt==="card"){$("rawArea").value=card?JSON.stringify(card,null,2):"（未载入角色卡）";}
+    else{$("rawArea").value=regex?JSON.stringify(regex.wasArray?regex.arr:regex.arr[0],null,2):"（未载入正则）";}
+  }
+  $("rawTarget").addEventListener("change",loadRaw);
+  $("btnRawReload").onclick=loadRaw;
+  $("btnRawApply").onclick=function(){
+    var tgt=$("rawTarget").value;var obj;
+    try{obj=JSON.parse($("rawArea").value);}catch(e){toast("JSON 格式错误："+e.message,"err");return;}
+    if(tgt==="card"){
+      if(!obj.data && obj.name!==undefined)obj={spec:"chara_card_v3",spec_version:"3.0",data:obj};
+      if(!obj.data){toast("不是有效角色卡结构。","err");return;}
+      clearPendingBookImport();card=obj;fillCard();showUI();
+    }else{
+      var arr,wasArray;
+      if(Array.isArray(obj)){arr=obj;wasArray=true;}else{arr=[obj];wasArray=false;}
+      regex={arr:arr,wasArray:wasArray};fillRegex();
+    }
+    setDirty(true);toast("已应用到编辑器（记得保存）","ok");
+  };
+
+  /* ---------- 标签页 ---------- */
+  function switchTab(name){
+    document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.pane===name);});
+    document.querySelectorAll(".pane").forEach(function(p){p.classList.toggle("active",p.id==="pane-"+name);});
+    if(name==="raw")loadRaw();
+  }
+  document.querySelectorAll(".tab").forEach(function(t){t.onclick=function(){switchTab(t.dataset.pane);};});
+
+  /* ---------- 保存 / 备份 ---------- */
+  function download(name,text){
+    var blob=new Blob([text],{type:"application/json;charset=utf-8"});
+    var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+  }
+  function serializeCard(){return JSON.stringify(card,null,2);}
+  function serializeRegex(){return JSON.stringify(regex.wasArray?regex.arr:regex.arr[0],null,2);}
+
+  async function writeHandle(handle,text){
+    var w=await handle.createWritable();await w.write(text);await w.close();
+  }
+
+  $("btnBackup").onclick=function(){
+    var ts=new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);
+    if(card)download(cardFileName.replace(/\.json$/i,"")+".backup-"+ts+".json",serializeCard());
+    if(regex)download(regexFileName.replace(/\.json$/i,"")+".backup-"+ts+".json",serializeRegex());
+    toast("备份已下载","ok");
+  };
+
+  $("btnSave").onclick=async function(){
+    if(!card && !regex){toast("没有可保存的数据","err");return;}
+    // 校验
+    try{ if(card)JSON.parse(serializeCard()); if(regex)JSON.parse(serializeRegex()); }
+    catch(e){toast("序列化失败，保存中止："+e.message,"err");return;}
+    var savedTo=[];
+    try{
+      if(hasFSA){
+        if(card){ if(!cardHandle){cardHandle=await pickSaveHandle(cardFileName);} if(cardHandle){await writeHandle(cardHandle,serializeCard());savedTo.push(cardFileName);} }
+        if(regex){ if(!regexHandle){regexHandle=await pickSaveHandle(regexFileName);} if(regexHandle){await writeHandle(regexHandle,serializeRegex());savedTo.push(regexFileName);} }
+        if(savedTo.length){toast("已保存到原文件："+savedTo.join(" + "),"ok");setDirty(false);return;}
+      }
+    }catch(e){ if(e && e.name==='AbortError'){toast("已取消保存");return;} toast("直接写入失败，改为下载："+e.message,"err"); }
+    // fallback 下载
+    if(card)download(cardFileName,serializeCard());
+    if(regex)download(regexFileName,serializeRegex());
+    toast("已导出下载（浏览器不支持直接覆盖）","ok");setDirty(false);
+  };
+  async function pickSaveHandle(suggested){
+    try{return await window.showSaveFilePicker({suggestedName:suggested,types:[{description:"JSON",accept:{"application/json":[".json"]}}]});}
+    catch(e){if(e&&e.name==='AbortError')throw e;return null;}
+  }
+
+  /* ========== AI 设置 / 中转站 API / 预设库 ========== */
+  var LS_CFG="cce_ai_cfg", LS_PROMPTS="cce_prompts", LS_JAILS="cce_jails";
+  var aiCfg={baseUrl:"",apiKey:"",model:"",temperature:"1",maxTokens:"2048"};
+  var promptLib=[];   // [{name,content}]
+  var jailLib=[];     // [{name,content}]
+
+  function loadStore(){
+    try{var c=JSON.parse(localStorage.getItem(LS_CFG));if(c&&typeof c==="object")Object.assign(aiCfg,c);}catch(e){}
+    try{var p=JSON.parse(localStorage.getItem(LS_PROMPTS));if(Array.isArray(p))promptLib=p;}catch(e){}
+    try{var j=JSON.parse(localStorage.getItem(LS_JAILS));if(Array.isArray(j))jailLib=j;}catch(e){}
+  }
+  function saveCfg(){try{localStorage.setItem(LS_CFG,JSON.stringify(aiCfg));}catch(e){}}
+  function savePrompts(){try{localStorage.setItem(LS_PROMPTS,JSON.stringify(promptLib));}catch(e){}}
+  function saveJails(){try{localStorage.setItem(LS_JAILS,JSON.stringify(jailLib));}catch(e){}}
+
+  /* ---- API 调用（OpenAI 兼容中转站） ---- */
+  function chatEndpoint(){
+    var b=(aiCfg.baseUrl||"").trim().replace(/\/+$/,"");
+    if(!b)return "";
+    if(/\/chat\/completions$/.test(b))return b;
+    if(/\/v\d+$/.test(b))return b+"/chat/completions";
+    return b+"/v1/chat/completions";
+  }
+  function modelsEndpoint(){
+    var b=(aiCfg.baseUrl||"").trim().replace(/\/+$/,"");
+    if(!b)return "";
+    b=b.replace(/\/chat\/completions$/,"");
+    if(/\/v\d+$/.test(b))return b+"/models";
+    return b+"/v1/models";
+  }
+  function buildMessages(sysText,jailText,userText){
+    var msgs=[];
+    var sys=[sysText,jailText].filter(function(s){return s&&s.trim();}).join("\n\n");
+    if(sys)msgs.push({role:"system",content:sys});
+    msgs.push({role:"user",content:userText});
+    return msgs;
+  }
+  // 流式调用；onDelta(textChunk) 实时回调，返回完整文本
+  async function callAI(messages,onDelta){
+    var url=chatEndpoint();
+    if(!url)throw new Error("未配置 API 地址");
+    if(!aiCfg.model)throw new Error("未选择模型");
+    var body={model:aiCfg.model,messages:messages,stream:true,
+      temperature:parseFloat(aiCfg.temperature)||1};
+    var mt=parseInt(aiCfg.maxTokens,10); if(mt>0)body.max_tokens=mt;
+    var resp=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+(aiCfg.apiKey||"")},body:JSON.stringify(body)});
+    if(!resp.ok){var t="";try{t=await resp.text();}catch(e){}throw new Error("HTTP "+resp.status+(t?("："+t.slice(0,300)):""));}
+    var ct=resp.headers.get("content-type")||"";
+    if(!resp.body||ct.indexOf("event-stream")<0){
+      // 非流式回退
+      var data=await resp.json();
+      var txt=(data.choices&&data.choices[0]&&(data.choices[0].message?data.choices[0].message.content:data.choices[0].text))||"";
+      if(onDelta&&txt)onDelta(txt);
+      return txt;
+    }
+    var reader=resp.body.getReader(),dec=new TextDecoder(),buf="",full="";
+    while(true){
+      var r=await reader.read(); if(r.done)break;
+      buf+=dec.decode(r.value,{stream:true});
+      var lines=buf.split("\n"); buf=lines.pop();
+      for(var i=0;i<lines.length;i++){
+        var ln=lines[i].trim(); if(!ln||ln.indexOf("data:")!==0)continue;
+        var payload=ln.slice(5).trim(); if(payload==="[DONE]")continue;
+        try{var obj=JSON.parse(payload);var d=obj.choices&&obj.choices[0]&&obj.choices[0].delta;var piece=d?(d.content||""):"";if(piece){full+=piece;if(onDelta)onDelta(piece);}}catch(e){}
+      }
+    }
+    return full;
+  }
+  async function fetchModels(){
+    var url=modelsEndpoint(); if(!url)throw new Error("未配置 API 地址");
+    var resp=await fetch(url,{headers:{"Authorization":"Bearer "+(aiCfg.apiKey||"")}});
+    if(!resp.ok)throw new Error("HTTP "+resp.status);
+    var data=await resp.json();
+    var list=Array.isArray(data)?data:(data.data||data.models||[]);
+    return list.map(function(m){return typeof m==="string"?m:(m.id||m.name||m.model);}).filter(Boolean);
+  }
+
+  /* ---- 通用：读文本文件 ---- */
+  async function pickTextFile(){
+    return await new Promise(function(res){
+      var inp=document.createElement("input");inp.type="file";inp.accept=".json,.txt,.yaml,.yml,application/json,text/plain";
+      inp.onchange=function(){var f=inp.files[0];if(!f){res(null);return;}var rd=new FileReader();rd.onload=function(){res({text:rd.result,name:f.name});};rd.readAsText(f,"utf-8");};
+      inp.click();
+    });
+  }
+  // 从多种格式提取 [{name,content}]：JSON数组 / ST预设(prompts[]) / 纯文本
+  function parseLibImport(text,fileName){
+    var out=[]; var obj=null;
+    try{obj=JSON.parse(text);}catch(e){}
+    if(obj){
+      if(Array.isArray(obj)){
+        obj.forEach(function(it,i){
+          if(typeof it==="string"){if(it.trim())out.push({name:"条目 "+(i+1),content:it});}
+          else if(it&&typeof it==="object"){var c=it.content||it.prompt||it.text||it.value||"";var n=it.name||it.title||it.identifier||("条目 "+(i+1));if(String(c).trim())out.push({name:String(n),content:String(c)});}
+        });
+      }else if(Array.isArray(obj.prompts)){ // SillyTavern 预设
+        obj.prompts.forEach(function(p){if(p&&typeof p==="object"&&p.content&&String(p.content).trim()&&!p.marker){out.push({name:String(p.name||p.identifier||"提示词"),content:String(p.content)});}});
+      }else if(obj.content!==undefined){ out.push({name:String(obj.name||fileName.replace(/\.\w+$/,"")),content:String(obj.content)}); }
+      else{ // 兜底：对象值里找字符串
+        Object.keys(obj).forEach(function(k){if(typeof obj[k]==="string"&&obj[k].trim())out.push({name:k,content:obj[k]});});
+      }
+    }else{ // 纯文本，整篇作为一条
+      if(text.trim())out.push({name:fileName.replace(/\.\w+$/,""),content:text});
+    }
+    return out;
+  }
+
+  /* ---- AI 设置弹窗渲染 ---- */
+  function renderSettings(){
+    $("apiBase").value=aiCfg.baseUrl||"";
+    $("apiKey").value=aiCfg.apiKey||"";
+    $("apiModel").value=aiCfg.model||"";
+    $("apiTemp").value=aiCfg.temperature||"";
+    $("apiMaxTok").value=aiCfg.maxTokens||"";
+    renderLib("prompt");renderLib("jail");
+  }
+  function renderLib(kind){
+    var lib=kind==="prompt"?promptLib:jailLib;
+    var host=$(kind==="prompt"?"promptLib":"jbLib");
+    host.innerHTML="";
+    if(!lib.length){var d=document.createElement("div");d.className="mini";d.style.padding="4px 2px";d.textContent="（空）点上方按钮新增或导入。";host.appendChild(d);}
+    lib.forEach(function(it,i){host.appendChild(libItem(kind,it,i));});
+  }
+  function libItem(kind,it,idx){
+    var lib=kind==="prompt"?promptLib:jailLib;var save=kind==="prompt"?savePrompts:saveJails;
+    var wrap=document.createElement("div");wrap.className="lib-item";
+    var lh=document.createElement("div");lh.className="lh";
+    var name=document.createElement("input");name.type="text";name.value=it.name||"";name.placeholder="名称";
+    var edit=document.createElement("button");edit.className="btn";edit.style.padding="4px 10px";edit.style.fontSize="12px";edit.textContent="展开";
+    var del=document.createElement("button");del.className="btn danger";del.style.padding="4px 10px";del.style.fontSize="12px";del.textContent="删除";
+    lh.appendChild(name);lh.appendChild(edit);lh.appendChild(del);
+    var ta=document.createElement("textarea");ta.value=it.content||"";ta.placeholder=(kind==="prompt"?"提示词正文…":"破甲词正文…");
+    name.addEventListener("input",function(){it.name=this.value;save();});
+    ta.addEventListener("input",function(){it.content=this.value;save();});
+    edit.onclick=function(){wrap.classList.toggle("open");edit.textContent=wrap.classList.contains("open")?"收起":"展开";};
+    del.onclick=function(){if(!confirm("删除「"+(it.name||"未命名")+"」？"))return;lib.splice(idx,1);save();renderLib(kind);};
+    wrap.appendChild(lh);wrap.appendChild(ta);
+    return wrap;
+  }
+
+  $("btnAISettings").onclick=function(){renderSettings();$("ovSettings").classList.add("show");};
+  // 绑定 API 字段
+  [["apiBase","baseUrl"],["apiKey","apiKey"],["apiModel","model"],["apiTemp","temperature"],["apiMaxTok","maxTokens"]].forEach(function(p){
+    $(p[0]).addEventListener("input",function(){aiCfg[p[1]]=this.value;saveCfg();});
+  });
+  $("btnFetchModels").onclick=async function(){
+    var btn=this;btn.disabled=true;var old=btn.textContent;btn.textContent="拉取中…";
+    try{
+      var models=await fetchModels();
+      var sel=$("apiModelList");sel.innerHTML="";
+      var ph=document.createElement("option");ph.value="";ph.textContent="— 选择模型（"+models.length+"）—";sel.appendChild(ph);
+      models.forEach(function(m){var o=document.createElement("option");o.value=m;o.textContent=m;sel.appendChild(o);});
+      if(aiCfg.model&&models.indexOf(aiCfg.model)>=0)sel.value=aiCfg.model;
+      sel.style.display="block";
+      toast("获取到 "+models.length+" 个模型，下拉选择","ok");
+    }catch(e){toast("拉取模型失败："+e.message,"err");}
+    btn.disabled=false;btn.textContent=old;
+  };
+  $("apiModelList").addEventListener("change",function(){if(this.value){aiCfg.model=this.value;$("apiModel").value=this.value;saveCfg();}});
+  $("btnTestApi").onclick=async function(){
+    var btn=this;btn.disabled=true;var old=btn.textContent;btn.textContent="测试中…";
+    $("apiTestResult").textContent="";
+    try{ var out=await callAI([{role:"user",content:"回复两个字：在线"}],null); $("apiTestResult").textContent="✓ "+(out||"(空)").slice(0,20);$("apiTestResult").style.color="var(--ok)"; }
+    catch(e){$("apiTestResult").textContent="✗ "+e.message.slice(0,40);$("apiTestResult").style.color="var(--danger)";}
+    btn.disabled=false;btn.textContent=old;
+  };
+  $("btnAddPrompt").onclick=function(){promptLib.push({name:"新提示词",content:""});savePrompts();renderLib("prompt");$("promptLib").lastElementChild.classList.add("open");};
+  $("btnAddJb").onclick=function(){jailLib.push({name:"新破甲词",content:""});saveJails();renderLib("jail");$("jbLib").lastElementChild.classList.add("open");};
+  function importInto(kind){
+    return async function(){
+      var r=await pickTextFile();if(!r)return;
+      var items=parseLibImport(r.text,r.name);
+      if(!items.length){toast("没解析出可导入的条目","err");return;}
+      if(kind==="prompt"){promptLib=promptLib.concat(items);savePrompts();renderLib("prompt");}
+      else{jailLib=jailLib.concat(items);saveJails();renderLib("jail");}
+      toast("导入 "+items.length+" 条","ok");
+    };
+  }
+  $("btnImportPrompt").onclick=importInto("prompt");
+  $("btnImportJb").onclick=importInto("jail");
+  $("btnExportPrompt").onclick=function(){if(!promptLib.length){toast("提示词库为空","err");return;}download("提示词库.json",JSON.stringify(promptLib,null,2));toast("已导出提示词库","ok");};
+  $("btnExportJb").onclick=function(){if(!jailLib.length){toast("破甲词库为空","err");return;}download("破甲词库.json",JSON.stringify(jailLib,null,2));toast("已导出破甲词库","ok");};
+
+  /* ========== AI 润色 ========== */
+  var polishCtx=null; // {getter,setter,label}
+  function fillPolishSelects(){
+    var ps=$("polishPrompt"),js=$("polishJb");
+    ps.innerHTML='<option value="">（不使用）</option>';
+    promptLib.forEach(function(it,i){var o=document.createElement("option");o.value=i;o.textContent=it.name||("提示词 "+(i+1));ps.appendChild(o);});
+    js.innerHTML='<option value="">（不使用）</option>';
+    jailLib.forEach(function(it,i){var o=document.createElement("option");o.value=i;o.textContent=it.name||("破甲词 "+(i+1));js.appendChild(o);});
+  }
+  function openPolish(label,getter,setter){
+    if(!aiCfg.baseUrl||!aiCfg.model){toast("请先在「⚙ AI 设置」里配置 API 和模型","err");return;}
+    polishCtx={getter:getter,setter:setter,label:label};
+    fillPolishSelects();
+    $("polishField").textContent=label;
+    $("polishSrc").value=getter();
+    $("polishOut").value="";
+    $("polishStatus").textContent="";
+    if(!$("polishInstruct").value.trim())$("polishInstruct").value="保持原意和设定不变，润色以下文本，使其更自然流畅、有文采。只输出润色后的正文，不要解释。";
+    $("btnPolishApply").disabled=true;
+    $("ovPolish").classList.add("show");
+  }
+  $("btnPolishRun").onclick=async function(){
+    if(!polishCtx)return;
+    var btn=this;btn.disabled=true;var old=btn.innerHTML;btn.innerHTML='<span class="spinner"></span>生成中';
+    var src=$("polishSrc").value;
+    var pi=$("polishPrompt").value,ji=$("polishJb").value;
+    var sysText=pi!==""?(promptLib[pi].content||""):"";
+    var jailText=ji!==""?(jailLib[ji].content||""):"";
+    var userText=$("polishInstruct").value.trim()+"\n\n===原文===\n"+src;
+    $("polishOut").value="";$("polishStatus").textContent="生成中…";
+    try{
+      await callAI(buildMessages(sysText,jailText,userText),function(chunk){$("polishOut").value+=chunk;$("polishOut").scrollTop=$("polishOut").scrollHeight;});
+      $("btnPolishApply").disabled=!$("polishOut").value.trim();
+      $("polishStatus").textContent="完成 · "+$("polishOut").value.length+" 字";
+      toast("润色完成","ok");
+    }catch(e){$("polishStatus").textContent="失败";toast("润色失败："+e.message,"err");}
+    btn.disabled=false;btn.innerHTML=old;
+  };
+  $("btnPolishApply").onclick=function(){
+    if(!polishCtx)return;
+    var v=$("polishOut").value.trim();if(!v){toast("没有可应用的结果","err");return;}
+    polishCtx.setter(v);
+    $("ovPolish").classList.remove("show");
+    toast("已应用到「"+polishCtx.label+"」","ok");
+  };
+  // 给静态字段挂润色按钮
+  function attachPolish(fieldId,label){
+    var el=$(fieldId);if(!el)return;
+    var bar=document.createElement("div");bar.className="field-actions";
+    var b=document.createElement("button");b.type="button";b.className="polish-btn";b.textContent="✨ AI 润色";
+    b.onclick=function(){openPolish(label,function(){return el.value;},function(v){el.value=v;el.dispatchEvent(new Event("input",{bubbles:true}));});};
+    bar.appendChild(b);
+    el.parentNode.appendChild(bar);
+  }
+  attachPolish("f-desc","角色描述");
+  attachPolish("f-pers","性格");
+  attachPolish("f-scen","场景");
+  attachPolish("f-mesex","对话示例");
+  // 暴露给动态卡片（开场白 / 世界书）用
+  window.__ccePolish=openPolish;
+
+  /* ========== 提取模板 ========== */
+  function blankYamlValues(text){
+    // 保留 YAML 键名与结构，清空值；保留代码围栏、注释、标题
+    return text.split("\n").map(function(line){
+      if(/^\s*#/.test(line))return line;                 // 注释
+      var m=line.match(/^(\s*)([\w一-龥A-Za-z][\w一-龥A-Za-z .\/()]*?):(\s*)(\S.*)?$/);
+      if(m){ // key: value  → 保留 key，清空 value（若值是引号/文字）
+        if(m[4]===undefined||m[4]===""||/^[|>]/.test(m[4]))return line; // 无值或块标量，保留
+        return m[1]+m[2]+": ";
+      }
+      var li=line.match(/^(\s*)-\s+(.*)$/); // 列表项 → 变占位
+      if(li)return li[1]+"- ";
+      return line;
+    }).join("\n");
+  }
+  function extractTemplate(){
+    if(!card)return;
+    var descSkeleton=$("tplDescSkeleton").checked;
+    var clearGreet=$("tplGreet").checked;
+    var clearBookContent=$("tplBookContent").checked;
+    var keepRegex=$("tplKeepRegex").checked;
+    var keepMeta=$("tplKeepMeta").checked;
+    var t=deepClone(card);
+    var d=t.data;
+    d.name="";d.creator_notes="";
+    if(!keepMeta){d.creator="";d.character_version="";d.tags=[];}
+    d.personality="";d.scenario="";d.mes_example="";d.system_prompt="";d.post_history_instructions="";
+    d.description=descSkeleton?blankYamlValues(d.description||""):"";
+    if(clearGreet){
+      d.first_mes="";
+      if(Array.isArray(d.alternate_greetings))d.alternate_greetings=d.alternate_greetings.map(function(){return "";});
+    }
+    if(d.character_book&&Array.isArray(d.character_book.entries)){
+      if(clearBookContent){d.character_book.entries.forEach(function(e){e.content="";});}
+      else{d.character_book.entries=[];}
+    }
+    if(d.extensions){
+      if(!keepRegex)d.extensions.regex_scripts=[];
+      if(d.extensions.depth_prompt)d.extensions.depth_prompt.prompt="";
+    }
+    // 同步顶层镜像字段
+    ["name","description","personality","scenario","first_mes","mes_example","system_prompt","post_history_instructions"].forEach(function(k){
+      if(t[k]!==undefined)t[k]=deepClone(d[k]);
+    });
+    if(t.creator_notes!==undefined)t.creator_notes="";
+    if(t.creatorcomment!==undefined)t.creatorcomment="";
+    if(!keepMeta){if(t.tags!==undefined)t.tags=[];if(t.creator!==undefined)t.creator="";if(t.character_version!==undefined)t.character_version="";}
+    if(t.alternate_greetings!==undefined)t.alternate_greetings=deepClone(d.alternate_greetings||[]);
+    var base=(cardFileName||"角色卡").replace(/\.json$/i,"");
+    download(base+"_模板.json",JSON.stringify(t,null,2));
+    $("ovTemplate").classList.remove("show");
+    toast("模板已导出","ok");
+  }
+  $("btnTemplate").onclick=function(){if(!card)return;$("ovTemplate").classList.add("show");};
+  $("btnTemplateGo").onclick=extractTemplate;
+
+  // 弹窗关闭：× / data-close 按钮 + 点遮罩
+  document.querySelectorAll("[data-close]").forEach(function(b){
+    b.onclick=function(){var m=$(b.getAttribute("data-close"));if(m)m.classList.remove("show");};
+  });
+  ["ovSettings","ovPolish","ovTemplate"].forEach(function(id){
+    $(id).addEventListener("mousedown",function(ev){if(ev.target===this)this.classList.remove("show");});
+  });
+
+  /* ---------- 离开确认 ---------- */
+  window.addEventListener("beforeunload",function(e){ if(dirty){e.preventDefault();e.returnValue="";} });
+
+  loadStore();
+  bindCardFields();
+  restoreLastFiles();
+  if(!hasFSA){ /* 提示 fallback */ }
+})();
+</script>
+</body></html>
